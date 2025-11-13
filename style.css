@@ -239,3 +239,74 @@ main {
 .upgrade-btn:enabled:hover {
     background-color: #2980b9;
 }
+/* --- 響應式佈局 (Responsive Design) --- */
+
+/* 1. 針對寬度小於 1250px 的螢幕 */
+/* 當螢幕縮小到這個尺寸時，我們讓三欄佈局變成兩欄 + 一欄 */
+@media (max-width: 1250px) {
+    
+    /* 調整主容器寬度，讓內容更緊湊 */
+    main {
+        max-width: 900px;
+        flex-wrap: wrap; /* 允許項目換行 */
+    }
+
+    /* 將三個面板分成兩排 */
+    #resource-panel {
+        /* 資源面板佔滿一行 */
+        width: 100%; 
+        order: -1; /* 確保它在最頂部 */
+    }
+
+    #synthesis-panel, 
+    #upgrade-panel {
+        /* 合成和升級面板並排顯示 */
+        width: calc(50% - 10px); /* 各佔一半，中間留空 */
+        min-width: 380px; /* 確保內容不會太擠 */
+    }
+}
+
+
+/* 2. 針對寬度小於 800px 的螢幕 (例如平板直立或手機橫向) */
+/* 在這個尺寸，我們將所有面板強制單欄堆疊 */
+@media (max-width: 800px) {
+
+    main {
+        flex-direction: column; /* 強制垂直堆疊 */
+        max-width: 95%; /* 佔用絕大部分螢幕寬度 */
+        margin: 0 auto; /* 保持居中 */
+    }
+
+    /* 所有面板都佔滿 100% 寬度 */
+    #resource-panel,
+    #synthesis-panel, 
+    #upgrade-panel {
+        width: 100%;
+        min-width: unset; /* 取消最小寬度限制 */
+        box-sizing: border-box; /* 確保 padding 不會導致超出 */
+    }
+}
+
+/* 3. 針對手機直立 (寬度小於 500px) */
+@media (max-width: 500px) {
+    header h1 {
+        font-size: 1.5em; /* 縮小標題字體 */
+    }
+
+    /* 元素列表項目更緊湊 */
+    .element-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .synthesis-btn {
+        width: 100%; /* 按鈕佔滿寬度，方便點擊 */
+        margin-top: 5px;
+    }
+
+    /* 確保 footer 的重置按鈕也能適應 */
+    #reset-panel button {
+        width: 90%;
+    }
+}
+
