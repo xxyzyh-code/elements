@@ -366,22 +366,23 @@ function renderElementItem(elementId, data) {
     const ownedCount = gameState.inventory[elementId] || 0;
     
     // ------------------------------------------------------------------
-    // 🚨 修正後的顯示/解鎖邏輯：確保 H, He 和下一個元素始終可見
+    // ✅ 修正後的顯示/解鎖邏輯：移除 Z-1 檢查，改為檢查 requiredElement
     let shouldDisplay = false;
     
     if (data.Z === 1) {
         // H 永遠顯示
         shouldDisplay = true;
     } else if (data.period <= gameState.maxUnlockedPeriod) {
-        // 已解鎖週期內的所有元素必須顯示 (讓玩家知道所有已解鎖的合成路徑)
+        // 已解鎖週期內的所有元素必須顯示
         shouldDisplay = true;
     } else if (data.period === gameState.maxUnlockedPeriod + 1) {
-        // 這是下一個週期的新元素。我們需要知道它是週期中的第一個元素嗎？
-        // 檢查前一個元素的原子序 Z-1 是否已解鎖。
-        const previousElement = Object.values(ELEMENT_DATA).find(e => e.Z === data.Z - 1);
+        // 這是下一個週期的元素，我們必須讓該週期的第一個元素出現。
+        // 由於您的數據有跳躍，我們不再檢查 Z-1，而是直接檢查它的 requiredElement 是否存在庫存中。
         
-        // 只有當前置元素已經存在庫存中時，才顯示下一個週期的第一個元素
-        if (previousElement && gameState.inventory[previousElement.symbol] > 0) {
+        const requiredElementId = data.requiredElement;
+        
+        // 只有當 Na 的 requiredElement (Be) 存在於庫存中時，才顯示 Na
+        if (requiredElementId && gameState.inventory[requiredElementId] > 0) {
              shouldDisplay = true;
         }
     }
