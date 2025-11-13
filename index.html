@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚛️ 週期表點擊遊戲</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>⚛️ 週期表合成計畫</h1>
+        <p id="status-message">目標：合成所有週期表元素！</p>
+        <p id="save-message" style="color: green; font-size: 0.9em; margin-top: 5px;"></p> </header>
+
+    <main>
+        <section id="resource-panel" class="panel">
+            <h2>🧪 實驗室狀態</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <p>基礎粒子 (Quark):</p>
+                    <span id="quark-display" class="resource-value">0</span>
+                    <span class="income-rate" id="income-display">(+0/s)</span>
+                </div>
+                <div class="stat-box">
+                    <p>當前週期 (Period):</p>
+                    <span id="level-display" class="resource-value">1</span>
+                </div>
+                <div class="stat-box">
+                    <p>重啟碎片:</p>
+                    <span id="shard-display" class="resource-value">0</span>
+                </div>
+            </div>
+            
+            <button id="main-click-button">
+                點擊獲取粒子
+                <span id="click-power-display">(x1)</span>
+            </button>
+        </section>
+
+        <section id="synthesis-panel" class="panel">
+            <h2>⚛️ 元素庫存 & 合成</h2>
+            <div id="inventory-list" class="element-list">
+                </div>
+        </section>
+        
+        <section id="upgrade-panel" class="panel">
+            <h2>🌌 奇點增益 (重啟後可用)</h2>
+            <div id="upgrade-list" class="element-list">
+                </div>
+        </section>
+
+    </main>
+
+    <footer id="reset-panel">
+        <button id="reset-button">
+            🌌 宇宙大爆炸 (重置遊戲，獲取奇點碎片)
+        </button>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
