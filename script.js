@@ -364,11 +364,35 @@ function renderUpgrades() {
 /** 渲染單個元素在庫存或合成列表中 */
 function renderElementItem(elementId, data) {
     const ownedCount = gameState.inventory[elementId] || 0;
-    const canSynthesize = data.Z > 1 && data.period <= gameState.maxUnlockedPeriod;
     
+    // ------------------------------------------------------------------
+    // 🚨 修正後的顯示/解鎖邏輯：確保 H, He 和下一個元素始終可見
+    let shouldDisplay = false;
+    
+    if (data.Z === 1) {
+        // H 永遠顯示
+        shouldDisplay = true;
+    } else if (data.period <= gameState.maxUnlockedPeriod) {
+        // 已解鎖週期內的所有元素必須顯示 (讓玩家知道所有已解鎖的合成路徑)
+        shouldDisplay = true;
+    } else if (data.period === gameState.maxUnlockedPeriod + 1) {
+        // 這是下一個週期的新元素。我們需要知道它是週期中的第一個元素嗎？
+        // 檢查前一個元素的原子序 Z-1 是否已解鎖。
+        const previousElement = Object.values(ELEMENT_DATA).find(e => e.Z === data.Z - 1);
+        
+        // 只有當前置元素已經存在庫存中時，才顯示下一個週期的第一個元素
+        if (previousElement && gameState.inventory[previousElement.symbol] > 0) {
+             shouldDisplay = true;
+        }
+    }
+    // ------------------------------------------------------------------
+
     let costText = "";
     let isAffordable = true;
     let buttonText = "合成 (Max)";
+
+    // 只有當元素有成本時 (Z>1)，我們才需要計算成本並顯示合成按鈕
+    const canSynthesize = data.cost && shouldDisplay;
 
     if (data.cost) {
         const costResource = data.cost.resource;
@@ -389,6 +413,9 @@ function renderElementItem(elementId, data) {
         }
     }
     
+    // 如果不應顯示，直接返回
+    if (!shouldDisplay) return document.createElement('div');
+
     const itemEl = document.createElement('div');
     itemEl.className = 'element-item';
     itemEl.innerHTML = `
@@ -415,6 +442,7 @@ function renderElementItem(elementId, data) {
     
     return itemEl;
 }
+
 
 /** 更新所有 UI 元素 */
 function updateUI(currentIncome = null) {
@@ -444,16 +472,24 @@ function updateUI(currentIncome = null) {
     $inventoryList.innerHTML = '';
     const sortedElements = Object.values(ELEMENT_DATA).sort((a, b) => a.Z - b.Z);
     
+    // 🚨 修正：現在 rely on renderElementItem 的內部邏輯來決定是否顯示
     sortedElements.forEach(data => {
-        if (data.Z === 1 || data.period <= gameState.maxUnlockedPeriod) {
-            $inventoryList.appendChild(renderElementItem(data.symbol, data));
+        // 直接調用 renderElementItem，它會根據邏輯決定是否返回一個可見的元素
+        const item = renderElementItem(data.symbol, data);
+        if (item) {
+            $inventoryList.appendChild(item);
         }
     });
 
     renderUpgrades(); 
 
     // 3. 更新重置按鈕狀態
-    $resetButton.disabled = gameState.Quark < 10000;
+    const MIN_QUARK_FOR_RESET = 100000; // 提高門檻
+    const MIN_PERIOD_FOR_RESET = 2;     // 必須至少解鎖到第 2 週期
+    
+    $resetButton.disabled = 
+        gameState.Quark < MIN_QUARK_FOR_RESET || 
+        gameState.maxUnlockedPeriod < MIN_PERIOD_FOR_RESET;
 }
 
 
