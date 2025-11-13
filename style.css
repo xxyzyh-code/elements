@@ -1,0 +1,241 @@
+/* style.css */
+
+:root {
+    --primary-color: #3498db; /* 藍色 */
+    --secondary-color: #2ecc71; /* 綠色 */
+    --bg-color: #ecf0f1; /* 淺灰色背景 */
+    --panel-bg: #ffffff;
+    --border-color: #bdc3c7;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+    background-color: var(--bg-color);
+    color: #333;
+    padding: 20px;
+}
+
+header {
+    margin-bottom: 20px;
+}
+
+h1 {
+    color: var(--primary-color);
+}
+
+main {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* --- 面板樣式 --- */
+.panel {
+    flex: 1;
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* --- 資源面板 --- */
+#resource-panel {
+    min-width: 300px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    background-color: #f8f8f8;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.resource-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: var(--secondary-color);
+}
+
+.income-rate {
+    display: block;
+    font-size: 0.8em;
+    color: #7f8c8d;
+}
+
+/* --- 主要點擊按鈕 --- */
+#main-click-button {
+    width: 100%;
+    padding: 15px 0;
+    font-size: 1.2em;
+    font-weight: bold;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#main-click-button:hover {
+    background-color: #2980b9;
+}
+
+#click-power-display {
+    display: block;
+    font-size: 0.8em;
+    margin-top: 5px;
+}
+
+/* --- 元素列表 (庫存與合成) --- */
+.element-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.element-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: #fafafa;
+}
+
+.element-info {
+    text-align: left;
+}
+
+.element-info h4 {
+    margin: 0 0 5px 0;
+    color: #34495e;
+}
+
+.element-info p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #7f8c8d;
+}
+
+.synthesis-btn {
+    padding: 8px 15px;
+    font-size: 0.9em;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.synthesis-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.synthesis-btn:enabled:hover {
+    background-color: #27ae60;
+}
+
+/* --- 庫存計數 --- */
+.inventory-count {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: var(--primary-color);
+    margin-left: 15px;
+}
+
+/* --- 底部重置按鈕 --- */
+#reset-panel {
+    margin-top: 30px;
+}
+
+#reset-button {
+    padding: 12px 30px;
+    font-size: 1.1em;
+    background-color: #e74c3c; /* 紅色 */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#reset-button:hover:not(:disabled) {
+    background-color: #c0392b;
+}
+
+#reset-button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.lock-message {
+    color: #e67e22; /* 橘色 */
+    padding: 10px;
+    border: 1px dashed #e67e22;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+/* style.css 底部新增 */
+
+/* 調整 main 佈局以容納三個面板 */
+main {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    max-width: 1400px; /* 擴大主體寬度 */
+    margin: 0 auto;
+}
+
+/* --- 奇點升級面板樣式 --- */
+#upgrade-panel {
+    min-width: 300px;
+}
+
+.upgrade-item {
+    padding: 10px;
+    border: 1px dashed var(--primary-color); /* 突出奇點升級 */
+    border-radius: 4px;
+    background-color: #f7f9fc;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.upgrade-item h4 {
+    color: #007bff;
+    margin: 0 0 5px 0;
+}
+
+.upgrade-btn {
+    padding: 6px 10px;
+    font-size: 0.8em;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.upgrade-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.upgrade-btn:enabled:hover {
+    background-color: #2980b9;
+}
