@@ -1,11 +1,13 @@
 /* style.css */
 
 :root {
-    --primary-color: #3498db; /* 藍色 */
-    --secondary-color: #2ecc71; /* 綠色 */
+    --primary-color: #3498db; /* 藍色 - Quark/核心 */
+    --secondary-color: #2ecc71; /* 綠色 - 點擊/收益 */
+    --tertiary-color: #f39c12; /* 橙色 - Science Points/研究 */
     --bg-color: #ecf0f1; /* 淺灰色背景 */
     --panel-bg: #ffffff;
     --border-color: #bdc3c7;
+    --special-border-color: #2c3e50; /* 深藍/黑 */
 }
 
 body {
@@ -24,17 +26,33 @@ h1 {
     color: var(--primary-color);
 }
 
+/* --- 主要佈局容器修改：設置兩列主要內容 --- */
 main {
     display: flex;
     justify-content: center;
     gap: 20px;
-    max-width: 1200px;
+    max-width: 1400px; /* 擴大以容納更多內容 */
     margin: 0 auto;
+}
+
+/* 核心內容區 (左側：資源與合成) */
+#main-content-col {
+    flex: 2; /* 佔用較大空間 */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 元遊戲區 (右側：研究與奇點) */
+#meta-content-col {
+    flex: 1; /* 佔用較小空間 */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 /* --- 面板樣式 --- */
 .panel {
-    flex: 1;
     background-color: var(--panel-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -42,7 +60,7 @@ main {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* --- 資源面板 --- */
+/* --- 資源面板 (現在包含 SP) --- */
 #resource-panel {
     min-width: 300px;
 }
@@ -58,12 +76,25 @@ main {
     background-color: #f8f8f8;
     padding: 10px;
     border-radius: 4px;
+    /* 讓 SP 區塊有不同的顏色標識 */
+    border-left: 5px solid transparent; 
 }
+
+/* 突出顯示 Science Points 區塊 */
+#resource-panel .stat-box:nth-child(2) {
+    border-left-color: var(--tertiary-color);
+}
+
 
 .resource-value {
     font-size: 2em;
     font-weight: bold;
     color: var(--secondary-color);
+}
+
+/* 讓 SP 數值使用專屬顏色 */
+#science-display {
+    color: var(--tertiary-color);
 }
 
 .income-rate {
@@ -129,6 +160,14 @@ main {
     color: #7f8c8d;
 }
 
+/* 批量合成按鈕群組 */
+.synthesis-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap; /* 避免在小螢幕上溢出 */
+    justify-content: flex-end;
+}
+
 .synthesis-btn {
     padding: 8px 15px;
     font-size: 0.9em;
@@ -154,7 +193,7 @@ main {
     font-weight: bold;
     font-size: 1.2em;
     color: var(--primary-color);
-    margin-left: 15px;
+    margin-left: 5px;
 }
 
 /* --- 底部重置按鈕 --- */
@@ -182,33 +221,19 @@ main {
     cursor: not-allowed;
 }
 
-.lock-message {
-    color: #e67e22; /* 橘色 */
-    padding: 10px;
-    border: 1px dashed #e67e22;
-    border-radius: 4px;
-    margin-top: 10px;
-}
 
-/* style.css 底部新增 */
-
-/* 調整 main 佈局以容納三個面板 */
-main {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    max-width: 1400px; /* 擴大主體寬度 */
-    margin: 0 auto;
-}
+/* ======================================= */
+/* ====== 研究與升級面板樣式 (新增/修改) ====== */
+/* ======================================= */
 
 /* --- 奇點升級面板樣式 --- */
-#upgrade-panel {
-    min-width: 300px;
+#upgrade-panel h2 {
+    color: var(--special-border-color);
 }
 
 .upgrade-item {
     padding: 10px;
-    border: 1px dashed var(--primary-color); /* 突出奇點升級 */
+    border: 1px dashed var(--special-border-color); /* 突出奇點升級 */
     border-radius: 4px;
     background-color: #f7f9fc;
     margin-bottom: 10px;
@@ -231,46 +256,65 @@ main {
     margin-top: 5px;
 }
 
-.upgrade-btn:disabled {
+.upgrade-btn:enabled:hover {
+    background-color: #2980b9;
+}
+
+/* --- 研究實驗室面板樣式 --- */
+#research-panel h2 {
+    color: var(--tertiary-color);
+}
+
+.research-item {
+    padding: 10px;
+    border: 1px solid var(--tertiary-color); /* 使用 SP 顏色 */
+    border-radius: 4px;
+    background-color: #fff9f0; /* 淺橙色背景 */
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.research-item h4 {
+    color: var(--tertiary-color);
+    margin: 0 0 5px 0;
+}
+
+.research-btn {
+    padding: 6px 10px;
+    font-size: 0.8em;
+    background-color: var(--tertiary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.research-btn:disabled {
     background-color: #bdc3c7;
     cursor: not-allowed;
 }
 
-.upgrade-btn:enabled:hover {
-    background-color: #2980b9;
+.research-btn:enabled:hover {
+    background-color: #e67e22;
 }
-/* --- 響應式佈局 (Responsive Design) --- */
 
-/* 1. 針對寬度小於 1250px 的螢幕 */
-/* 當螢幕縮小到這個尺寸時，我們讓三欄佈局變成兩欄 + 一欄 */
-@media (max-width: 1250px) {
-    
-    /* 調整主容器寬度，讓內容更緊湊 */
+
+/* ======================================= */
+/* ====== 響應式佈局 (Responsive Design) ====== */
+/* ======================================= */
+
+/* 1. 調整主容器佈局，將原來的三個面板變成兩列，右側為堆疊的元遊戲面板 */
+@media (min-width: 900px) {
     main {
-        max-width: 900px;
-        flex-wrap: wrap; /* 允許項目換行 */
-    }
-
-    /* 將三個面板分成兩排 */
-    #resource-panel {
-        /* 資源面板佔滿一行 */
-        width: 100%; 
-        order: -1; /* 確保它在最頂部 */
-    }
-
-    #synthesis-panel, 
-    #upgrade-panel {
-        /* 合成和升級面板並排顯示 */
-        width: calc(50% - 10px); /* 各佔一半，中間留空 */
-        min-width: 380px; /* 確保內容不會太擠 */
+        flex-direction: row;
+        align-items: flex-start; /* 頂部對齊 */
     }
 }
 
-
-/* 2. 針對寬度小於 800px 的螢幕 (例如平板直立或手機橫向) */
+/* 2. 針對寬度小於 900px 的螢幕 (例如平板直立或手機橫向) */
 /* 在這個尺寸，我們將所有面板強制單欄堆疊 */
-@media (max-width: 800px) {
-
+@media (max-width: 900px) {
     main {
         flex-direction: column; /* 強制垂直堆疊 */
         max-width: 95%; /* 佔用絕大部分螢幕寬度 */
@@ -278,19 +322,30 @@ main {
     }
 
     /* 所有面板都佔滿 100% 寬度 */
-    #resource-panel,
-    #synthesis-panel, 
-    #upgrade-panel {
+    .panel {
         width: 100%;
         min-width: unset; /* 取消最小寬度限制 */
-        box-sizing: border-box; /* 確保 padding 不會導致超出 */
+        box-sizing: border-box; 
+    }
+    
+    /* 移除多餘的列佈局 */
+    #main-content-col,
+    #meta-content-col {
+        flex: 1; 
+        width: 100%;
+        gap: 20px;
     }
 }
+
 
 /* 3. 針對手機直立 (寬度小於 500px) */
 @media (max-width: 500px) {
     header h1 {
         font-size: 1.5em; /* 縮小標題字體 */
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr; /* 資源統計也變成單列堆疊 */
     }
 
     /* 元素列表項目更緊湊 */
@@ -299,9 +354,14 @@ main {
         align-items: flex-start;
     }
 
-    .synthesis-btn {
-        width: 100%; /* 按鈕佔滿寬度，方便點擊 */
+    .synthesis-buttons {
+        width: 100%; /* 按鈕群組佔滿寬度 */
+        justify-content: space-around;
         margin-top: 5px;
+    }
+
+    .synthesis-btn {
+        flex: 1; /* 讓批量按鈕平分空間 */
     }
 
     /* 確保 footer 的重置按鈕也能適應 */
@@ -309,4 +369,3 @@ main {
         width: 90%;
     }
 }
-
