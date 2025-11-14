@@ -571,13 +571,12 @@ function synthesizeElementBatch(targetElementId, batchAmount) {
         // 確保 Quark 至少為 0
         if (gameState.Quark < 0) gameState.Quark = 0; 
     } else { 
-        // 元素材料必須是整數
-        // 這裡需要將 totalCost 四捨五入為最接近的整數 (因為 costAmount 是 Math.ceil(finalCost)，所以這裡應該也取整)
-        // 為了避免浮點數問題，我們使用 Math.ceil(singleCost * actualBatchAmount) 來計算實際扣除的整數資源數量
-        const integerCostToDeduct = Math.ceil(singleCost) * actualBatchAmount;
+        // 元素材料必須是整數。
+        // ✅ 修正：對總成本向上取整，確保材料被充分扣除。
+        const integerCostToDeduct = Math.ceil(totalCost); 
         
         if ((gameState.inventory[requiredResource] || 0) < integerCostToDeduct) {
-            // 這是一個備用檢查，理論上不應該到達這裡，除非 costAmount 的計算與這裡不一致
+            // 這是一個備用檢查，理論上不應該到達這裡
             $('status-message').textContent = '資源計算錯誤或不足，請檢查成本。';
             return;
         }
@@ -600,6 +599,7 @@ function synthesizeElementBatch(targetElementId, batchAmount) {
     
     updateUI();
 }
+
 // ----------------------------------------------------
 
 /** ✅ 新增：檢查庫存里程碑，並解鎖新研究 */
