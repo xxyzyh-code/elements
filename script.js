@@ -778,9 +778,10 @@ function renderElementItem(elementId, data) {
 }
 
 
-/** 渲染奇點升級列表 (保持不變) */
+/** 渲染奇點升級列表 (修正：移除重複的標題設置) */
 function renderUpgrades() {
-    $upgradeList.innerHTML = '<h3>🌌 奇點升級 (永久)</h3>';
+    // 🎯 修正: 僅清空列表，不添加標題 (因為 HTML 中已經有了 <h2>)
+    $upgradeList.innerHTML = ''; 
     
     for (const upgradeId in SINGULARITY_UPGRADES) {
         const data = SINGULARITY_UPGRADES[upgradeId];
@@ -812,9 +813,10 @@ function renderUpgrades() {
     }
 }
 
-/** ✅ 新增：渲染研究實驗室列表 (臨時增益) */
+/** ✅ 新增：渲染研究實驗室列表 (修正：移除重複的標題設置) */
 function renderResearchLab() {
-    $researchList.innerHTML = '<h3>🔬 研究實驗室 (重置清空)</h3>';
+    // 🎯 修正: 僅清空列表，不添加標題 (因為 HTML 中已經有了 <h2>)
+    $researchList.innerHTML = '';
     
     if (gameState.permanentlyUnlockedResearch.length === 0) {
         $researchList.innerHTML += '<p>尚未解鎖任何研究。試著合成更多元素！</p>';
