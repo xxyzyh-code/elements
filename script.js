@@ -653,15 +653,36 @@ function setSynthesisMode(mode) {
 // --- UI 渲染函數 (新增研究實驗室渲染) ---
 
 /** * ----------------------------------------------------
- * ✅ 核心修改：渲染單個元素項目 (根據模式渲染按鈕)
+ * ✅ 核心修改：渲染單個元素項目 (修正解鎖邏輯)
  * ----------------------------------------------------
  */
 function renderElementItem(elementId, data) {
     const inventoryCount = gameState.inventory[elementId] || 0;
-    const isUnlocked = data.period <= gameState.maxUnlockedPeriod || inventoryCount > 0;
     
-    if (!isUnlocked && elementId !== ELEMENT_DATA["H"].symbol) return null;
+    // 1. 元素是否應顯示？
+    let shouldRender = false;
 
+    if (elementId === "H") {
+        shouldRender = true; // H 永遠顯示
+    } else if (inventoryCount > 0) {
+        shouldRender = true; // 已經合成過的元素必須顯示
+    } else if (data.period <= gameState.maxUnlockedPeriod) {
+        shouldRender = true; // 整個週期已解鎖的元素必須顯示 (用於週期內的其他元素，如 Be 在 Li 之後)
+    } else if (data.cost) {
+        // 如果有成本且未合成過，檢查它是不是下一個要解鎖的元素
+        const requiredResource = data.cost.resource;
+        
+        // 條件：前置資源 (He) 必須存在庫存中，才能顯示 Li
+        if (requiredResource !== "Quark" && (gameState.inventory[requiredResource] || 0) > 0) {
+            shouldRender = true;
+        }
+        // 特例：像 He (成本是 Quark)，只要週期解鎖 (MaxPeriod=1)，就應該顯示
+        else if (requiredResource === "Quark" && data.period === 1) {
+            shouldRender = true;
+        }
+    }
+
+    if (!shouldRender) return null;
     const itemEl = document.createElement('div');
     itemEl.className = 'element-item';
     
