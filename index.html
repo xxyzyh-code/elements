@@ -16,13 +16,14 @@
 
     <main>
         <div id="main-content-col">
+            
             <section id="resource-panel" class="panel">
                 <h2>🧪 實驗室狀態</h2>
                 <div class="stats-grid">
                     <div class="stat-box">
                         <p>基礎粒子 (Quark):</p>
                         <span id="quark-display" class="resource-value">0</span>
-                        <span class="income-rate" id="income-display">(+0/s)</span>
+                        <span class="income-rate" id="income-display">(+0/s)</span> 
                     </div>
                     <div class="stat-box">
                         <p>科學點 (SP):</p>
@@ -38,41 +39,45 @@
                     </div>
                 </div>
                 
-          <section id="synthesis-panel" class="panel">
-           <h2>⚛️ 元素庫存 & 合成</h2>
-
-            <div id="synthesis-mode-group" class="mode-group">
-           <button data-mode="1">x1</button>
-           <button data-mode="10">x10</button>
-           <button data-mode="100">x100</button>
-           <button data-mode="1000">x1000</button>
-           <button data-mode="10000">x10000</button>
-           <button data-mode="MAX">MAX</button>
-           </div>
-          <div id="inventory-list" class="element-list">
-          </div>
-          </section>
+                <div class="click-area">
+                    <button id="main-click-button">
+                        ✨ 生成基礎粒子 (Quark)
+                    </button>
+                    </div>
+            </section>
 
             <section id="synthesis-panel" class="panel">
                 <h2>⚛️ 元素庫存 & 合成</h2>
-                <div id="inventory-list" class="element-list">
+                
+                <div id="synthesis-mode-group" class="mode-group">
+                    <button data-mode="1">x1</button>
+                    <button data-mode="10">x10</button>
+                    <button data-mode="100">x100</button>
+                    <button data-mode="1000">x1000</button>
+                    <button data-mode="10000">x10000</button>
+                    <button data-mode="MAX">MAX</button>
                 </div>
+                
+                <div id="inventory-list" class="element-list">
+                    </div>
             </section>
         </div>
+        
         <div id="meta-content-col">
-            <section id="research-panel" class="panel">
+            
+            <section id="research-lab-panel" class="panel">
                 <h2>🔬 研究實驗室 (本輪增益)</h2>
                 <div id="research-list" class="element-list">
-                </div>
+                    </div>
             </section>
             
-            <section id="upgrade-panel" class="panel">
+            <section id="singularity-upgrade-panel" class="panel">
                 <h2>🌌 奇點增益 (永久升級)</h2>
                 <div id="upgrade-list" class="element-list">
-                </div>
+                    </div>
             </section>
         </div>
-        </main>
+    </main>
 
     <footer id="reset-panel">
         <button id="reset-button">
