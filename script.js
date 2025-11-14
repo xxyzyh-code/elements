@@ -312,6 +312,8 @@ const DEFAULT_GAME_STATE = {
         "CATALYST_REDUCTION": 0,
         "HYPER_SYNTHESIS": 0 
     },
+    // ✅ 新增：批量合成模式 (默認為 x1)
+    "synthesisMode": 1, 
     // ✅ 新增：研究相關狀態
     "permanentlyUnlockedResearch": ["H_CATALYSIS"], // 永久解鎖的研究 ID (重置保留)
     "activeResearch": [] // 當前已花費 SP 購買並啟用的研究 ID (重置清空)
@@ -333,6 +335,8 @@ const $upgradeList = $('upgrade-list');
 const $researchList = $('research-list'); // 假設您在 HTML 中新增了 research-list 元素
 const $saveMessage = $('save-message');
 const $scienceDisplay = $('science-display'); // 假設您在 HTML 中新增了 science-display 元素
+// ✅ 新增：批量模式按鈕組
+const $synthesisModeGroup = $('synthesis-mode-group');
 
 
 // --- 核心輔助函數 ---
@@ -411,7 +415,9 @@ function loadGame() {
                 // 保證新的研究屬性在舊存檔中能被正確設置
                 permanentlyUnlockedResearch: parsedState.permanentlyUnlockedResearch || DEFAULT_GAME_STATE.permanentlyUnlockedResearch,
                 activeResearch: parsedState.activeResearch || DEFAULT_GAME_STATE.activeResearch,
-                SciencePoints: parsedState.SciencePoints || DEFAULT_GAME_STATE.SciencePoints
+                SciencePoints: parsedState.SciencePoints || DEFAULT_GAME_STATE.SciencePoints,
+                // ✅ 新增：載入批量模式
+                synthesisMode: parsedState.synthesisMode || DEFAULT_GAME_STATE.synthesisMode
             };
             
             $('status-message').textContent = '✅ 遊戲進度已載入！';
@@ -517,7 +523,10 @@ function passiveIncome() {
     updateUI(); 
 }
 
-/** ✅ 更新：批量合成函數 (新增里程碑檢查) */
+/** ----------------------------------------------------
+ * ✅ 核心修改：批量合成函數 (支持 MAX 模式)
+ * ----------------------------------------------------
+ */
 function synthesizeElementBatch(targetElementId, batchAmount) {
     const data = ELEMENT_DATA[targetElementId];
     if (!data || !data.cost) return;
@@ -525,45 +534,84 @@ function synthesizeElementBatch(targetElementId, batchAmount) {
     const requiredResource = data.cost.resource;
     let requiredAmount = data.cost.amount; 
     const permEffects = calculatePermanentEffects();
-    const researchEffects = calculateCurrentResearchEffects(); // 獲取臨時研究增益
+    const researchEffects = calculateCurrentResearchEffects(); 
 
+    // 1. 計算成本減免
     let reduction = 0;
     if (requiredResource === "Quark") {
         reduction = Math.min(permEffects.quarkCostReduction, 0.90);
     } else {
-        // 應用永久材料減免 + 臨時研究減免 (疊加)
         const totalMaterialReduction = permEffects.materialCostReduction + researchEffects.materialCostReduction;
         reduction = Math.min(totalMaterialReduction, 0.90); 
     }
     
+    // 2. 計算單次合成的實際成本 (可能為小數)
     const singleCost = requiredAmount * (1 - reduction);
-    const totalCost = singleCost * batchAmount;
 
-    // 2. 資源檢查
-    if (requiredResource === "Quark") {
-        if (gameState.Quark < totalCost) return;
-        gameState.Quark -= totalCost;
-    } else { 
-        if ((gameState.inventory[requiredResource] || 0) < totalCost) return;
-        gameState.inventory[requiredResource] -= totalCost;
+    // 3. 確定實際合成的次數 (actualBatchAmount)
+    let actualBatchAmount;
+    const currentResource = (requiredResource === "Quark") 
+        ? gameState.Quark 
+        : (gameState.inventory[requiredResource] || 0);
+
+    if (batchAmount === 'MAX') {
+        // MAX 模式：計算可合成的最大整數次數
+        actualBatchAmount = Math.floor(currentResource / singleCost);
+    } else {
+        // x1, x10, x100... 模式：檢查是否負擔得起
+        const requestedBatch = parseInt(batchAmount);
+        const requiredTotalCost = singleCost * requestedBatch;
+        
+        if (currentResource < requiredTotalCost) {
+            $('status-message').textContent = `資源不足以合成 ${requestedBatch} 次！`;
+            return;
+        }
+        actualBatchAmount = requestedBatch;
     }
     
-    // 3. 執行合成
-    const yieldAmount = data.baseYield * batchAmount;
+    if (actualBatchAmount <= 0) {
+        $('status-message').textContent = '資源不足以合成！';
+        return;
+    }
+
+    // 4. 計算總成本和執行資源消耗
+    const totalCost = singleCost * actualBatchAmount; 
+    
+    if (requiredResource === "Quark") {
+        gameState.Quark -= totalCost; // Quark 可以是小數
+        // 確保 Quark 至少為 0
+        if (gameState.Quark < 0) gameState.Quark = 0; 
+    } else { 
+        // 元素材料必須是整數
+        // 這裡需要將 totalCost 四捨五入為最接近的整數 (因為 costAmount 是 Math.ceil(finalCost)，所以這裡應該也取整)
+        // 為了避免浮點數問題，我們使用 Math.ceil(singleCost * actualBatchAmount) 來計算實際扣除的整數資源數量
+        const integerCostToDeduct = Math.ceil(singleCost) * actualBatchAmount;
+        
+        if ((gameState.inventory[requiredResource] || 0) < integerCostToDeduct) {
+            // 這是一個備用檢查，理論上不應該到達這裡，除非 costAmount 的計算與這裡不一致
+            $('status-message').textContent = '資源計算錯誤或不足，請檢查成本。';
+            return;
+        }
+        gameState.inventory[requiredResource] -= integerCostToDeduct;
+    }
+    
+    // 5. 執行合成
+    const yieldAmount = data.baseYield * actualBatchAmount;
     gameState.inventory[targetElementId] = (gameState.inventory[targetElementId] || 0) + yieldAmount;
 
-    // 4. 檢查週期解鎖
+    // 6. 檢查週期解鎖
     if (data.period > gameState.maxUnlockedPeriod) {
         gameState.maxUnlockedPeriod = data.period;
         gameState.playerLevel++; 
         $('status-message').textContent = `🎉 成功解鎖第 ${data.period} 週期！`;
     }
 
-    // ✅ 5. 檢查里程碑解鎖
+    // 7. 檢查里程碑解鎖
     checkMilestoneUnlock(targetElementId);
     
     updateUI();
 }
+// ----------------------------------------------------
 
 /** ✅ 新增：檢查庫存里程碑，並解鎖新研究 */
 function checkMilestoneUnlock(elementId) {
@@ -602,22 +650,34 @@ function purchaseResearch(researchId) {
     updateUI();
 }
 
+/** * ----------------------------------------------------
+ * ✅ 新增：設置批量合成模式
+ * ----------------------------------------------------
+ */
+function setSynthesisMode(mode) {
+    gameState.synthesisMode = mode;
+    $('status-message').textContent = `合成模式已切換至 ${mode === 'MAX' ? '最大' : `x${mode}`}。`;
+    updateUI(); // 重新渲染列表以更新按鈕狀態
+}
+
 
 // --- UI 渲染函數 (新增研究實驗室渲染) ---
 
-/** 🖼️ 補齊：渲染單個元素項目，這是元素列表顯示的關鍵！ */
+/** * ----------------------------------------------------
+ * ✅ 核心修改：渲染單個元素項目 (根據模式渲染按鈕)
+ * ----------------------------------------------------
+ */
 function renderElementItem(elementId, data) {
     const inventoryCount = gameState.inventory[elementId] || 0;
     const isUnlocked = data.period <= gameState.maxUnlockedPeriod || inventoryCount > 0;
     
-    // 只有已解鎖的元素才渲染
     if (!isUnlocked && elementId !== ELEMENT_DATA["H"].symbol) return null;
 
     const itemEl = document.createElement('div');
     itemEl.className = 'element-item';
     
     let requiredResourceName = "";
-    let costAmount = 0;
+    let costAmount = 0; // 這是 UI 顯示的單次整數成本
     let isAffordable = true;
     
     const permEffects = calculatePermanentEffects();
@@ -625,7 +685,7 @@ function renderElementItem(elementId, data) {
 
     if (data.cost) {
         requiredResourceName = data.cost.resource;
-        costAmount = data.cost.amount;
+        const baseCost = data.cost.amount;
 
         let reduction = 0;
         if (requiredResourceName === "Quark") {
@@ -635,15 +695,48 @@ function renderElementItem(elementId, data) {
             reduction = Math.min(totalMaterialReduction, 0.90);
         }
         
-        const finalCost = costAmount * (1 - reduction);
-        costAmount = Math.ceil(finalCost);
+        const finalCost = baseCost * (1 - reduction);
+        costAmount = Math.ceil(finalCost); // UI 顯示的單次整數成本
         
-        const currentResource = (requiredResourceName === "Quark") ? gameState.Quark : (gameState.inventory[requiredResourceName] || 0);
+        const currentResource = (requiredResourceName === "Quark") 
+            ? gameState.Quark 
+            : (gameState.inventory[requiredResourceName] || 0);
         isAffordable = currentResource >= costAmount;
+    } else {
+        // H 元素
+        isAffordable = false; // H 不能被合成
     }
 
-    const synthesisMultiplier = gameState.singularityUpgrades["HYPER_SYNTHESIS"] > 0;
+    // 獲取當前模式和批量數量
+    const currentMode = gameState.synthesisMode;
+    const isMaxMode = currentMode === 'MAX';
+    const batchValue = isMaxMode ? 'MAX' : parseInt(currentMode);
+    const buttonText = isMaxMode ? 'MAX' : `x${batchValue}`;
+
+    let isBatchAffordable = isAffordable;
+    const synthesisMultiplierUnlocked = gameState.singularityUpgrades["HYPER_SYNTHESIS"] > 0;
     
+    if (data.cost) {
+        const requiredResourceCount = (requiredResourceName === "Quark") 
+            ? gameState.Quark 
+            : (gameState.inventory[requiredResourceName] || 0);
+            
+        // 只有在 Quark 成本下，批量模式才不需要 HYPER_SYNTHESIS 升級 (因為 Quark 不消耗元素)
+        const canUseBatchMode = requiredResourceName === "Quark" || synthesisMultiplierUnlocked;
+
+        if (batchValue > 1 && !isMaxMode && !canUseBatchMode) {
+            // 如果是材料成本，且模式大於 x1，但未解鎖超維度合成，則禁用
+            isBatchAffordable = false;
+        } else if (batchValue > 1 && !isMaxMode) {
+            // 檢查是否負擔得起當前模式的成本 (使用 Math.ceil(finalCost) 作為單次整數成本)
+            const requiredTotalCost = costAmount * batchValue; 
+            isBatchAffordable = requiredResourceCount >= requiredTotalCost;
+        } else if (isMaxMode) {
+            // MAX 模式下，只要能合成 1 次，按鈕就應該啟用
+            isBatchAffordable = requiredResourceCount >= costAmount;
+        }
+    }
+
     const resourceText = data.cost 
         ? `需要: ${costAmount} ${requiredResourceName}`
         : '基礎生成';
@@ -661,22 +754,13 @@ function renderElementItem(elementId, data) {
             ${data.cost ? `
                 <div class="synthesis-buttons">
                     <button 
-                        class="synthesis-btn" 
+                        class="synthesis-btn ${isMaxMode ? 'max-mode' : ''}" 
                         data-element="${data.symbol}"
-                        data-batch="1"
-                        ${!isAffordable ? 'disabled' : ''}
+                        data-batch="${batchValue}"
+                        ${!isBatchAffordable ? 'disabled' : ''}
                     >
-                        合成 x1
+                        合成 ${buttonText}
                     </button>
-                    ${synthesisMultiplier ? `
-                        <button 
-                            class="synthesis-btn" 
-                            data-element="${data.symbol}"
-                            data-batch="10"
-                            ${!isAffordable || (gameState.inventory[requiredResourceName] || 0) < costAmount * 10 ? 'disabled' : ''}
-                        >
-                            合成 x10
-                        </button>` : ''}
                 </div>` : ''}
         </div>
     `;
@@ -685,7 +769,7 @@ function renderElementItem(elementId, data) {
     itemEl.querySelectorAll('.synthesis-btn').forEach(button => {
         button.onclick = () => {
             const elementId = button.dataset.element;
-            const batch = parseInt(button.dataset.batch);
+            const batch = button.dataset.batch; // 'MAX' 或數字字符串
             synthesizeElementBatch(elementId, batch);
         };
     });
@@ -698,7 +782,6 @@ function renderElementItem(elementId, data) {
 function renderUpgrades() {
     $upgradeList.innerHTML = '<h3>🌌 奇點升級 (永久)</h3>';
     
-    // ... (渲染奇點升級邏輯保持不變) ...
     for (const upgradeId in SINGULARITY_UPGRADES) {
         const data = SINGULARITY_UPGRADES[upgradeId];
         const currentLevel = gameState.singularityUpgrades[upgradeId];
@@ -723,7 +806,6 @@ function renderUpgrades() {
 
         const button = itemEl.querySelector('.upgrade-btn');
         if (button && !isMaxLevel) {
-            // 確保這裡調用的是 purchaseUpgrade
             button.onclick = () => purchaseUpgrade(upgradeId); 
         }
         $upgradeList.appendChild(itemEl);
@@ -810,7 +892,7 @@ function updateUI(currentIncome = null) {
     const sortedElements = Object.values(ELEMENT_DATA).sort((a, b) => a.Z - b.Z);
     
     sortedElements.forEach(data => {
-        const item = renderElementItem(data.symbol, data); // 呼叫補齊後的函數
+        const item = renderElementItem(data.symbol, data); 
         if (item) {
             $inventoryList.appendChild(item);
         }
@@ -826,6 +908,18 @@ function updateUI(currentIncome = null) {
     $resetButton.disabled = 
         gameState.Quark < MIN_QUARK_FOR_RESET || 
         gameState.maxUnlockedPeriod < MIN_PERIOD_FOR_RESET;
+        
+    // 4. 更新批量模式按鈕的活動狀態
+    if ($synthesisModeGroup) {
+        $synthesisModeGroup.querySelectorAll('button').forEach(button => {
+            const mode = button.dataset.mode;
+            if (mode == gameState.synthesisMode) {
+                button.classList.add('active-mode');
+            } else {
+                button.classList.remove('active-mode');
+            }
+        });
+    }
 }
 
 
@@ -835,6 +929,16 @@ function attachEventListeners() {
     // 修正的點擊事件
     $mainClickButton.addEventListener('click', handleClick); 
     $resetButton.addEventListener('click', handleReset);
+    
+    // ✅ 新增：批量合成模式按鈕事件
+    if ($synthesisModeGroup) {
+        $synthesisModeGroup.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function() {
+                const mode = this.dataset.mode;
+                setSynthesisMode(mode);
+            });
+        });
+    }
 }
 
 /** ✅ 更新：處理重置，並保留永久解鎖的研究列表 */
@@ -856,7 +960,8 @@ function handleReset() {
         gameState.singularityUpgrades = savedUpgrades;
         gameState.singularityShards = savedShards;
         gameState.permanentlyUnlockedResearch = savedUnlockedResearch;
-
+        // 保持批量模式為默認值 (x1)
+        
         $('status-message').textContent = `🚀 宇宙重啟！你獲得了 ${shardsGained} 個奇點碎片。`;
         
         saveGame();
@@ -875,6 +980,4 @@ function initGame() {
 }
 
 // 啟動遊戲
-// document.addEventListener('DOMContentLoaded', () => { initGame(); });
-// 由於您將 script 放在 body 底部，可以直接調用 initGame()，但為了更健壯，我保留了之前建議的 DOMContentLoaded 模式：
 document.addEventListener('DOMContentLoaded', initGame);
