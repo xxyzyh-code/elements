@@ -323,21 +323,10 @@ let gameState = JSON.parse(JSON.stringify(DEFAULT_GAME_STATE));
 
 // --- DOM 元素快取 (新增 $researchList) ---
 const $ = (id) => document.getElementById(id);
-const $quarkDisplay = $('quark-display');
-const $incomeDisplay = $('income-display');
-const $levelDisplay = $('level-display');
-const $shardDisplay = $('shard-display');
-const $clickPowerDisplay = $('click-power-display');
-const $mainClickButton = $('main-click-button');
-const $inventoryList = $('inventory-list');
-const $resetButton = $('reset-button');
-const $upgradeList = $('upgrade-list');
-const $researchList = $('research-list'); // 假設您在 HTML 中新增了 research-list 元素
-const $saveMessage = $('save-message');
-const $scienceDisplay = $('science-display'); // 假設您在 HTML 中新增了 science-display 元素
-// ✅ 新增：批量模式按鈕組
-const $synthesisModeGroup = $('synthesis-mode-group');
-
+let $quarkDisplay, $incomeDisplay, $levelDisplay, $shardDisplay, 
+    $clickPowerDisplay, $mainClickButton, $inventoryList, $resetButton, 
+    $upgradeList, $researchList, $saveMessage, $scienceDisplay, 
+    $synthesisModeGroup;
 
 // --- 核心輔助函數 ---
 
@@ -972,6 +961,25 @@ function handleReset() {
 }
 
 function initGame() {
+    // ✅ 新增：將所有 DOM 元素快取放在這裡
+    $quarkDisplay = $('quark-display');
+    $incomeDisplay = $('income-display');
+    $levelDisplay = $('level-display');
+    $shardDisplay = $('shard-display');
+    $clickPowerDisplay = $('click-power-display'); // 需在 HTML 中確認此ID
+    $mainClickButton = $('main-click-button');
+    $inventoryList = $('inventory-list');
+    $resetButton = $('reset-button');
+    $upgradeList = $('upgrade-list');
+    $researchList = $('research-list'); 
+    $saveMessage = $('save-message');
+    $scienceDisplay = $('science-display'); 
+    $synthesisModeGroup = $('synthesis-mode-group');
+    
+    // 檢查 $clickPowerDisplay 是否存在於您的 HTML 中，如果沒有，會是下一個報錯點
+    // 檢查 HTML：您的 HTML 中缺少 ID="click-power-display" 的元素。
+    // ⚠️ 您的 HTML 中缺少 $clickPowerDisplay！請在 HTML 補上。
+
     loadGame(); 
     attachEventListeners();
     
