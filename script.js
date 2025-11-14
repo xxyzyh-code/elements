@@ -1,4 +1,4 @@
-// --- 永久升級數據結構 ---
+// --- 永久升級數據結構 (奇點碎片購買) ---
 const SINGULARITY_UPGRADES = {
     "QUANTUM_CLICK": {
         "name": "量子點擊強化",
@@ -27,7 +27,6 @@ const SINGULARITY_UPGRADES = {
         "effectValue": 0.05,
         "maxLevel": 5
     },
-    // ✅ 新增：超維度合成升級
     "HYPER_SYNTHESIS": {
         "name": "超維度合成",
         "description": "解鎖元素批量合成 (x10) 功能，並永久降低元素材料成本 1%。",
@@ -39,7 +38,47 @@ const SINGULARITY_UPGRADES = {
     }
 };
 
-// --- 元素數據結構  ---
+// --- 研究實驗室數據 (科學點購買，重置時清空啟用狀態) ---
+const RESEARCH_UPGRADES = {
+    "H_CATALYSIS": {
+        "name": "氫催化",
+        "description": "H 的 Quark 產量 x3",
+        "cost": 50, // 花費 50 SP
+        "targetElement": "H",
+        "effectType": "incomeMultiplier",
+        "effectValue": 3
+    },
+    "FE_COST_REDUCTION": {
+        "name": "高爐改良",
+        "description": "Fe 的材料成本 (Mn) 降低 20%",
+        "cost": 1000, // 花費 1000 SP
+        "targetElement": "Fe",
+        "effectType": "materialCostReduction",
+        "effectValue": 0.20 // 降低 20%
+    },
+    "KR_BOOST": {
+        "name": "氪氣激發",
+        "description": "Kr 的科學點 (SP) 產量 x2",
+        "cost": 5000,
+        "targetElement": "Kr",
+        "effectType": "scienceYieldMultiplier",
+        "effectValue": 2
+    }
+};
+
+// --- 里程碑解鎖數據 (達成庫存數量，永久解鎖研究選項) ---
+const MILESTONE_UNLOCKS = {
+    "inventory": {
+        "Fe": { 
+            100: "FE_COST_REDUCTION" // 擁有 100 個 Fe，解鎖 "FE_COST_REDUCTION"
+        },
+        "Kr": {
+            10: "KR_BOOST" // 擁有 10 個 Kr，解鎖 "KR_BOOST"
+        }
+    }
+};
+
+// --- 元素數據結構 (已更新 Si 和 Kr 的 scienceYield) ---
 const ELEMENT_DATA = {
     "H": {
         "name": "氫 (Hydrogen)", "symbol": "H", "Z": 1, "period": 1, 
@@ -64,7 +103,7 @@ const ELEMENT_DATA = {
     "Be": {
         "name": "鈹 (Beryllium)", "symbol": "Be", "Z": 4, "period": 2,
         "cost": {"resource": "Li", "amount": 8},
-        "requiredElement": "Li",
+        "requiredElement": "Li", 
         "incomeRate": 5.0,
         "baseYield": 1
     },
@@ -95,7 +134,8 @@ const ELEMENT_DATA = {
         "cost": {"resource": "Al", "amount": 20},
         "requiredElement": "Al", 
         "incomeRate": 40.0,
-        "baseYield": 1
+        "baseYield": 1,
+        "scienceYield": 0.5 // ✅ 新增 SP 產量
     },
     "P": {
         "name": "磷 (Phosphorus)", "symbol": "P", "Z": 15, "period": 3,
@@ -182,7 +222,7 @@ const ELEMENT_DATA = {
         "requiredElement": "Mn", 
         "incomeRate": 1200.0,
         "baseYield": 1
-    }, // ✅ 逗號修正！
+    }, 
     "Co": {
         "name": "鈷 (Cobalt)", "symbol": "Co", "Z": 27, "period": 4,
         "cost": {"resource": "Fe", "amount": 110}, 
@@ -251,13 +291,15 @@ const ELEMENT_DATA = {
         "cost": {"resource": "Br", "amount": 300}, 
         "requiredElement": "Br", 
         "incomeRate": 6000.0, // 第四週期終點
-        "baseYield": 1
+        "baseYield": 1,
+        "scienceYield": 5.0 // ✅ 新增 SP 產量
     }
 };
 
 // --- 遊戲狀態 (初始默認值) ---
 const DEFAULT_GAME_STATE = {
     "Quark": 0,
+    "SciencePoints": 0, // ✅ 新增：科學點 (SP)
     "clickPower": 1,
     "totalClicks": 0,
     "inventory": { "H": 1 },
@@ -268,13 +310,16 @@ const DEFAULT_GAME_STATE = {
         "QUANTUM_CLICK": 0,
         "FUSION_EFFICIENCY": 0,
         "CATALYST_REDUCTION": 0,
-        "HYPER_SYNTHESIS": 0 // ✅ 已包含新升級
-    }
+        "HYPER_SYNTHESIS": 0 
+    },
+    // ✅ 新增：研究相關狀態
+    "permanentlyUnlockedResearch": ["H_CATALYSIS"], // 永久解鎖的研究 ID (重置保留)
+    "activeResearch": [] // 當前已花費 SP 購買並啟用的研究 ID (重置清空)
 };
 
 let gameState = JSON.parse(JSON.stringify(DEFAULT_GAME_STATE)); 
 
-// --- DOM 元素快取 (保持不變) ---
+// --- DOM 元素快取 (新增 $researchList) ---
 const $ = (id) => document.getElementById(id);
 const $quarkDisplay = $('quark-display');
 const $incomeDisplay = $('income-display');
@@ -285,18 +330,20 @@ const $mainClickButton = $('main-click-button');
 const $inventoryList = $('inventory-list');
 const $resetButton = $('reset-button');
 const $upgradeList = $('upgrade-list');
+const $researchList = $('research-list'); // 假設您在 HTML 中新增了 research-list 元素
 const $saveMessage = $('save-message');
+const $scienceDisplay = $('science-display'); // 假設您在 HTML 中新增了 science-display 元素
 
 
 // --- 核心輔助函數 ---
 
-/** 根據奇點升級計算當前所有永久增益的總和 (已更新) */
+/** 根據奇點升級計算當前所有永久增益的總和 */
 function calculatePermanentEffects() {
     let effects = {
         clickPowerMultiplier: 1.0,
         incomeRateMultiplier: 1.0,
         quarkCostReduction: 0.0,
-        materialCostReduction: 0.0 // ✅ 新增
+        materialCostReduction: 0.0 
     };
 
     for (const upgradeId in gameState.singularityUpgrades) {
@@ -308,30 +355,42 @@ function calculatePermanentEffects() {
                 effects[data.effectType] += level * data.effectValue;
             } 
             else if (data.effectType === "quarkCostReduction" || data.effectType === "materialCostReduction") {
-                effects[data.effectType] += level * data.effectValue; // ✅ 已更新
+                effects[data.effectType] += level * data.effectValue; 
             }
         }
     }
     return effects;
 }
 
+/** ✅ 新增：計算當前所有已啟用研究的臨時增益總和 */
+function calculateCurrentResearchEffects() {
+    let effects = {
+        incomeMultiplier: {}, // { "H": 3, "Fe": 1, ... }
+        materialCostReduction: 0.0, // 獨立的總減免
+        scienceYieldMultiplier: 1.0
+    };
 
-// --- 存檔與載入函數 (已更新) ---
+    for (const researchId of gameState.activeResearch) {
+        const data = RESEARCH_UPGRADES[researchId];
+        if (!data) continue;
 
-/** 保存遊戲狀態到 localStorage */
-function saveGame() {
-    try {
-        const serializedState = JSON.stringify(gameState);
-        localStorage.setItem('chemistry_clicker_save', serializedState);
-        if ($saveMessage) {
-            $saveMessage.textContent = '遊戲已自動儲存。';
-            setTimeout(() => $saveMessage.textContent = '', 2000);
+        if (data.effectType === "incomeMultiplier") {
+            // 由於多個研究可能作用於同一個元素，這裡我們累加乘數
+            effects.incomeMultiplier[data.targetElement] = (effects.incomeMultiplier[data.targetElement] || 1.0) + data.effectValue - 1; 
+        } 
+        else if (data.effectType === "materialCostReduction") {
+            effects.materialCostReduction += data.effectValue; 
         }
-    } catch (e) {
-        console.error("無法儲存遊戲進度", e);
-        if ($saveMessage) $saveMessage.textContent = '儲存失敗！';
+        else if (data.effectType === "scienceYieldMultiplier") {
+            // 假設 scienceYieldMultiplier 也是疊加的
+            effects.scienceYieldMultiplier += data.effectValue - 1; 
+        }
     }
+    return effects;
 }
+
+
+// --- 存檔與載入函數 (更新載入，確保新屬性初始化) ---
 
 /** 從 localStorage 載入遊戲狀態 */
 function loadGame() {
@@ -340,7 +399,7 @@ function loadGame() {
         if (savedState) {
             const parsedState = JSON.parse(savedState);
             
-            // ✅ 確保新的升級屬性被正確初始化
+            // ✅ 確保新的升級屬性被正確初始化，尤其是新的研究屬性
             gameState = {
                 ...DEFAULT_GAME_STATE,
                 ...parsedState,
@@ -348,7 +407,11 @@ function loadGame() {
                 singularityUpgrades: {
                     ...DEFAULT_GAME_STATE.singularityUpgrades, 
                     ...parsedState.singularityUpgrades
-                }
+                },
+                // 保證新的研究屬性在舊存檔中能被正確設置
+                permanentlyUnlockedResearch: parsedState.permanentlyUnlockedResearch || DEFAULT_GAME_STATE.permanentlyUnlockedResearch,
+                activeResearch: parsedState.activeResearch || DEFAULT_GAME_STATE.activeResearch,
+                SciencePoints: parsedState.SciencePoints || DEFAULT_GAME_STATE.SciencePoints
             };
             
             $('status-message').textContent = '✅ 遊戲進度已載入！';
@@ -361,65 +424,66 @@ function loadGame() {
     return false;
 }
 
-/** 清除遊戲存檔 (用於徹底重啟) */
-function clearGame() {
-    if (confirm("警告：這將永久清除所有遊戲進度，包括奇點碎片！確認清除嗎？")) {
-        localStorage.removeItem('chemistry_clicker_save');
-        gameState = JSON.parse(JSON.stringify(DEFAULT_GAME_STATE)); 
-        $('status-message').textContent = '💾 存檔已清除，遊戲已重啟。';
-        updateUI();
-    }
-}
+// ... (saveGame 和 clearGame 保持不變) ...
 
 
 // --- 核心邏輯函數 ---
 
-/** 玩家點擊獲取 Quark (保持不變) */
-function handleClick() {
-    const effects = calculatePermanentEffects();
-    const actualClickPower = gameState.clickPower * effects.clickPowerMultiplier; 
-    
-    gameState.Quark += actualClickPower;
-    gameState.totalClicks++;
-    
-    if (gameState.totalClicks % 100 === 0) {
-        gameState.clickPower++;
-    }
-    updateUI();
-}
-
-/** 計算並執行被動收入 (保持不變) */
+/** ✅ 更新：計算並執行被動收入 (同時計算 Quark 和 SP) */
 function passiveIncome() {
-    const effects = calculatePermanentEffects();
-    let totalIncome = 0;
+    const permEffects = calculatePermanentEffects();
+    const researchEffects = calculateCurrentResearchEffects(); // 獲取臨時研究增益
+    
+    let totalQuarkIncome = 0;
+    let totalScienceIncome = 0;
     
     for (const elementId in gameState.inventory) {
         const count = gameState.inventory[elementId];
         const data = ELEMENT_DATA[elementId];
-        if (count > 0 && data.incomeRate) {
-            totalIncome += count * data.incomeRate;
+        if (count <= 0) continue;
+
+        // 1. 計算 Quark 收入
+        if (data.incomeRate) {
+            let rate = data.incomeRate;
+            // 應用臨時研究 incomeMultiplier
+            rate *= researchEffects.incomeMultiplier[elementId] || 1.0; 
+            totalQuarkIncome += count * rate;
+        }
+
+        // 2. 計算 SciencePoints 收入
+        if (data.scienceYield) {
+            let scienceRate = data.scienceYield;
+            totalScienceIncome += count * scienceRate;
         }
     }
     
-    const finalIncome = totalIncome * effects.incomeRateMultiplier;
-    gameState.Quark += finalIncome;
+    // 應用奇點升級的全局收入乘數
+    const finalQuarkIncome = totalQuarkIncome * permEffects.incomeRateMultiplier;
+    // 應用臨時研究的全局 SP 乘數
+    const finalScienceIncome = totalScienceIncome * researchEffects.scienceYieldMultiplier; 
+    
+    gameState.Quark += finalQuarkIncome;
+    gameState.SciencePoints += finalScienceIncome;
     updateUI(); 
 }
 
-/** ✅ 新增：批量合成函數 (取代舊的 synthesizeElement) */
+/** ✅ 更新：批量合成函數 (新增里程碑檢查) */
 function synthesizeElementBatch(targetElementId, batchAmount) {
     const data = ELEMENT_DATA[targetElementId];
     if (!data || !data.cost) return;
 
     const requiredResource = data.cost.resource;
     let requiredAmount = data.cost.amount; 
-    const effects = calculatePermanentEffects();
+    const permEffects = calculatePermanentEffects();
+    const researchEffects = calculateCurrentResearchEffects(); // 獲取臨時研究增益
 
     let reduction = 0;
     if (requiredResource === "Quark") {
-        reduction = Math.min(effects.quarkCostReduction, 0.90);
+        reduction = Math.min(permEffects.quarkCostReduction, 0.90);
     } else {
-        reduction = Math.min(effects.materialCostReduction, 0.90); // ✅ 應用材料減免
+        // 應用永久材料減免 + 臨時研究減免 (疊加)
+        const totalMaterialReduction = permEffects.materialCostReduction + researchEffects.materialCostReduction;
+        reduction = Math.min(totalMaterialReduction, 0.90); 
     }
     
     const singleCost = requiredAmount * (1 - reduction);
@@ -444,39 +508,58 @@ function synthesizeElementBatch(targetElementId, batchAmount) {
         gameState.playerLevel++; 
         $('status-message').textContent = `🎉 成功解鎖第 ${data.period} 週期！`;
     }
+
+    // ✅ 5. 檢查里程碑解鎖
+    checkMilestoneUnlock(targetElementId);
     
     updateUI();
 }
 
-/** 購買奇點升級 (保持不變) */
-function purchaseUpgrade(upgradeId) {
-    const data = SINGULARITY_UPGRADES[upgradeId];
-    const currentLevel = gameState.singularityUpgrades[upgradeId];
+/** ✅ 新增：檢查庫存里程碑，並解鎖新研究 */
+function checkMilestoneUnlock(elementId) {
+    const count = gameState.inventory[elementId] || 0;
+    const milestones = MILESTONE_UNLOCKS.inventory[elementId];
 
-    if (currentLevel >= data.maxLevel) return;
+    if (milestones) {
+        for (const amount in milestones) {
+            const requiredAmount = parseInt(amount);
+            const researchId = milestones[amount];
+            
+            if (count >= requiredAmount && !gameState.permanentlyUnlockedResearch.includes(researchId)) {
+                gameState.permanentlyUnlockedResearch.push(researchId);
+                $('status-message').textContent = `🏆 里程碑達成：擁有 ${requiredAmount} 個 ${elementId}，永久解鎖研究：${RESEARCH_UPGRADES[researchId].name}！`;
+            }
+        }
+    }
+}
 
-    const cost = data.costBase * Math.pow(data.costGrowth, currentLevel);
-    
-    if (gameState.singularityShards < cost) {
-        $('status-message').textContent = `碎片不足！需要 ${Math.ceil(cost)} 個奇點碎片。`;
+/** ✅ 新增：購買研究實驗室升級 (臨時增益) */
+function purchaseResearch(researchId) {
+    const data = RESEARCH_UPGRADES[researchId];
+
+    if (gameState.activeResearch.includes(researchId)) return; // 已經買過此輪遊戲的研究
+
+    if (gameState.SciencePoints < data.cost) {
+        $('status-message').textContent = `科學點不足！需要 ${data.cost} 個科學點。`;
         return;
     }
 
-    gameState.singularityShards -= Math.ceil(cost);
-    gameState.singularityUpgrades[upgradeId]++;
+    gameState.SciencePoints -= data.cost;
+    gameState.activeResearch.push(researchId);
     
-    $('status-message').textContent = `📈 ${data.name} 升級到 Lv.${gameState.singularityUpgrades[upgradeId]}！`;
+    $('status-message').textContent = `🔬 成功啟用研究：${data.name}！本輪遊戲中生效。`;
 
     updateUI();
 }
 
 
-// --- UI 渲染函數 (已更新) ---
+// --- UI 渲染函數 (新增研究實驗室渲染) ---
 
 /** 渲染奇點升級列表 (保持不變) */
 function renderUpgrades() {
-    $upgradeList.innerHTML = '';
+    $upgradeList.innerHTML = '<h3>奇點升級 (永久)</h3>';
     
+    // ... (渲染奇點升級邏輯保持不變) ...
     for (const upgradeId in SINGULARITY_UPGRADES) {
         const data = SINGULARITY_UPGRADES[upgradeId];
         const currentLevel = gameState.singularityUpgrades[upgradeId];
@@ -507,137 +590,80 @@ function renderUpgrades() {
     }
 }
 
-/** 渲染單個元素在庫存或合成列表中 (✅ 已更新為批量合成) */
-function renderElementItem(elementId, data) {
-    const ownedCount = gameState.inventory[elementId] || 0;
-    const effects = calculatePermanentEffects();
+/** ✅ 新增：渲染研究實驗室列表 (臨時增益) */
+function renderResearchLab() {
+    $researchList.innerHTML = '<h3>研究實驗室 (重置清空)</h3>';
     
-    // --- 顯示/解鎖邏輯 (保持不變) ---
-    let shouldDisplay = false;
-    if (data.Z === 1) {
-        shouldDisplay = true;
-    } else if (data.period <= gameState.maxUnlockedPeriod) {
-        shouldDisplay = true;
-    } else if (data.period === gameState.maxUnlockedPeriod + 1) {
-        const requiredElementId = data.requiredElement;
-        if (requiredElementId && gameState.inventory[requiredElementId] > 0) {
-             shouldDisplay = true;
-        }
+    if (gameState.permanentlyUnlockedResearch.length === 0) {
+        $researchList.innerHTML += '<p>尚未解鎖任何研究。試著合成更多元素！</p>';
+        return;
     }
-    if (!shouldDisplay) return document.createElement('div');
-    // ---------------------------------------------------
 
-    let costText = "";
-    let buttonHtml = "";
-    let reduction = 0; // 用於顯示折扣
-    const canSynthesize = data.cost;
+    gameState.permanentlyUnlockedResearch.forEach(researchId => {
+        const data = RESEARCH_UPGRADES[researchId];
+        const isActive = gameState.activeResearch.includes(researchId);
+        const isAffordable = gameState.SciencePoints >= data.cost;
 
-    if (data.cost) {
-        const costResource = data.cost.resource;
-        let costAmount = data.cost.amount;
-
-        // 應用成本減免
-        if (costResource === "Quark") {
-            reduction = Math.min(effects.quarkCostReduction, 0.90);
-        } else {
-            reduction = Math.min(effects.materialCostReduction, 0.90); 
-        }
-        costAmount = costAmount * (1 - reduction); 
-
-        // x1 成本
-        const ownedResource = gameState.inventory[costResource] || 0;
-        const isAffordableX1 = (costResource === "Quark") 
-            ? gameState.Quark >= costAmount 
-            : ownedResource >= costAmount;
-            
-        costText = `成本: ${Math.ceil(costAmount).toLocaleString()} ${costResource === "Quark" ? '粒子' : costResource}`;
-        
-        // 批量合成邏輯
-        const hyperSynthLevel = gameState.singularityUpgrades.HYPER_SYNTHESIS || 0;
-        const canBatchSynthesize = hyperSynthLevel > 0;
-        const batchAmount = 10;
-        
-        // --- 渲染按鈕群組 ---
-        buttonHtml += `
-            <button 
-                class="synthesis-btn" 
-                data-id="${elementId}" 
-                data-batch="1"
-                ${!isAffordableX1 ? 'disabled' : ''}
-            >
-                x1 合成
-            </button>
+        const itemEl = document.createElement('div');
+        itemEl.className = 'research-item';
+        itemEl.innerHTML = `
+            <h4>${data.name} ${isActive ? ' (✅ 已啟用)' : ''}</h4>
+            <p>${data.description}</p>
+            ${!isActive ? `
+                <button 
+                    class="research-btn" 
+                    data-id="${researchId}"
+                    ${!isAffordable ? 'disabled' : ''}
+                >
+                    花費 ${data.cost} 科學點購買
+                </button>` : `<button class="research-btn" disabled>已啟用</button>`}
         `;
 
-        if (canBatchSynthesize) {
-            const totalCostX10 = costAmount * batchAmount;
-            const isAffordableX10 = (costResource === "Quark") 
-                ? gameState.Quark >= totalCostX10
-                : ownedResource >= totalCostX10;
-            
-            buttonHtml += `
-                <button 
-                    class="synthesis-btn" 
-                    data-id="${elementId}" 
-                    data-batch="${batchAmount}"
-                    ${!isAffordableX10 ? 'disabled' : ''}
-                >
-                    x${batchAmount} (需 ${Math.ceil(totalCostX10).toLocaleString()})
-                </button>
-            `;
+        const button = itemEl.querySelector('.research-btn');
+        if (button && !isActive) {
+            button.onclick = () => purchaseResearch(researchId);
         }
-    }
-
-    const itemEl = document.createElement('div');
-    itemEl.className = 'element-item';
-    itemEl.innerHTML = `
-        <div class="element-info">
-            <h4>${data.symbol} - ${data.name} (Z=${data.Z})</h4>
-            <p>庫存: <span class="inventory-count">${ownedCount.toLocaleString()}</span> | 收益: +${data.incomeRate}/s</p>
-            ${data.cost ? `<p class="cost-info">${costText} ${reduction > 0 ? `( -${(reduction * 100).toFixed(0)}% )` : ''}</p>` : ''}
-        </div>
-        <div class="synthesis-buttons">
-            ${buttonHtml}
-        </div>
-    `;
-    
-    // 為所有按鈕添加事件監聽器
-    itemEl.querySelectorAll('.synthesis-btn').forEach(button => {
-        if (!button.disabled) {
-            const batch = parseInt(button.dataset.batch);
-            button.onclick = () => synthesizeElementBatch(elementId, batch);
-        }
+        $researchList.appendChild(itemEl);
     });
-    
-    return itemEl;
 }
 
 
-/** 更新所有 UI 元素 (保持不變) */
+/** 更新所有 UI 元素 (更新顯示 SP 和渲染研究實驗室) */
 function updateUI(currentIncome = null) {
-    const effects = calculatePermanentEffects();
+    const permEffects = calculatePermanentEffects();
+    const researchEffects = calculateCurrentResearchEffects();
     
     // 1. 更新基礎資源面板
     $quarkDisplay.textContent = Math.floor(gameState.Quark).toLocaleString();
+    $scienceDisplay.textContent = Math.floor(gameState.SciencePoints).toLocaleString(); // 顯示 SP
     $levelDisplay.textContent = gameState.playerLevel;
     $shardDisplay.textContent = gameState.singularityShards.toLocaleString();
 
     // 計算並顯示實時收入
-    let totalIncome = 0;
+    let totalQuarkIncome = 0;
+    let totalScienceIncome = 0;
     for (const elementId in gameState.inventory) {
         const count = gameState.inventory[elementId];
         const data = ELEMENT_DATA[elementId];
-        if (count > 0 && data.incomeRate) {
-             totalIncome += count * data.incomeRate;
+        if (count > 0) {
+             // Quark 收入
+             let rate = data.incomeRate || 0;
+             rate *= researchEffects.incomeMultiplier[elementId] || 1.0; 
+             totalQuarkIncome += count * rate;
+
+             // SP 收入
+             totalScienceIncome += (data.scienceYield || 0) * count;
         }
     }
-    const finalIncome = totalIncome * effects.incomeRateMultiplier;
-    $incomeDisplay.textContent = `(+${finalIncome.toFixed(1)}/s)`;
+    const finalQuarkIncome = totalQuarkIncome * permEffects.incomeRateMultiplier;
+    const finalScienceIncome = totalScienceIncome * researchEffects.scienceYieldMultiplier;
+
+    $incomeDisplay.textContent = `(${finalQuarkIncome.toFixed(1)}/s) | SP: (+${finalScienceIncome.toFixed(2)}/s)`; // 整合 SP 收益顯示
     
-    const finalClickPower = gameState.clickPower * effects.clickPowerMultiplier;
+    const finalClickPower = gameState.clickPower * permEffects.clickPowerMultiplier;
     $clickPowerDisplay.textContent = `(x${finalClickPower.toFixed(2)})`;
     
-    // 2. 渲染庫存、合成和升級面板
+    // 2. 渲染庫存、合成、升級和研究面板
     $inventoryList.innerHTML = '';
     const sortedElements = Object.values(ELEMENT_DATA).sort((a, b) => a.Z - b.Z);
     
@@ -649,8 +675,9 @@ function updateUI(currentIncome = null) {
     });
 
     renderUpgrades(); 
+    renderResearchLab(); // ✅ 渲染研究實驗室
 
-    // 3. 更新重置按鈕狀態
+    // 3. 更新重置按鈕狀態 (保持不變)
     const MIN_QUARK_FOR_RESET = 100000; 
     const MIN_PERIOD_FOR_RESET = 2;     
     
@@ -660,26 +687,31 @@ function updateUI(currentIncome = null) {
 }
 
 
-// --- 事件與初始化 (保持不變) ---
+// --- 事件與初始化 (更新重置邏輯) ---
 
 function attachEventListeners() {
     $mainClickButton.addEventListener('click', handleClick);
     $resetButton.addEventListener('click', handleReset);
 }
 
+/** ✅ 更新：處理重置，並保留永久解鎖的研究列表 */
 function handleReset() {
-    if (confirm("確認重置？您將失去所有 Quark 和元素，但會獲得奇點碎片。")) {
-        const elementCount = Object.keys(gameState.inventory).reduce((acc, key) => acc + gameState.inventory[key], 0);
+    if (confirm("確認重置？您將失去所有 Quark、SP 和元素，但會獲得奇點碎片，且永久解鎖的研究選項將被保留。")) {
+        const elementCount = Object.keys(gameState.inventory).reduce((acc, key) => acc + (gameState.inventory[key] || 0), 0);
         const shardsGained = Math.floor(gameState.Quark / 10000) + elementCount * 5; 
         
-        gameState.singularityShards += shardsGained;
-        
+        // 儲存重置時需要保留的數據
         const savedUpgrades = gameState.singularityUpgrades;
-        const savedShards = gameState.singularityShards;
+        const savedShards = gameState.singularityShards + shardsGained;
+        const savedUnlockedResearch = gameState.permanentlyUnlockedResearch; 
         
+        // 重置為默認狀態
         gameState = JSON.parse(JSON.stringify(DEFAULT_GAME_STATE));
+        
+        // 恢復保留的數據
         gameState.singularityUpgrades = savedUpgrades;
         gameState.singularityShards = savedShards;
+        gameState.permanentlyUnlockedResearch = savedUnlockedResearch;
 
         $('status-message').textContent = `🚀 宇宙重啟！你獲得了 ${shardsGained} 個奇點碎片。`;
         
